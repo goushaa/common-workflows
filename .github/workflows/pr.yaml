@@ -19,10 +19,4 @@ jobs:
     - name: Create Pull Request
       run: |
         echo "Creating Pull Request..."
-        curl -X POST -H "Authorization: token ${{ steps.get_workflow_token.outputs.token }}" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/goushaa/gold/pulls -d '{"title":"Automated PR","head":"branch-name","base":"master"}'
-
-    - name: Merge Pull Request
-      run: |
-        echo "Merging Pull Request..."
-        PR_NUMBER=$(curl -H "Authorization: token ${{ steps.get_workflow_token.outputs.token }}" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/goushaa/gold/pulls | jq -r ".[0].number")
-        curl -X PUT -H "Authorization: token ${{ steps.get_workflow_token.outputs.token }}" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/goushaa/gold/pulls/$PR_NUMBER/merge -d '{"commit_title":"Automated Merge"}'
+        curl -X POST -H "Authorization: token ${{ steps.get_workflow_token.outputs.token }}" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/goushaa/gold/pulls -d '{"title":"Merge common-workflows master into gold master","head":"common-workflows-master","base":"master"}'

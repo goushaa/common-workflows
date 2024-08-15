@@ -9,35 +9,20 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v2
 
-    - name: Generate JWT
-      id: jwt
-      run: |
-        echo "Generating JWT..."
-        JWT=$(ruby -r openssl -r base64 -r time -e 'require "jwt"; app_id = ENV["GITHUB_APP_ID"]; private_key = OpenSSL::PKey::RSA.new(File.read(ENV["GITHUB_PRIVATE_KEY_PATH"])); payload = { iat: Time.now.to_i, exp: Time.now.to_i + 600, iss: app_id }; jwt = JWT.encode(payload, private_key, "RS256"); puts jwt')
-        echo "::set-output name=jwt::$JWT"
-      env:
-        GITHUB_APP_ID: ${{ vars.GH_APP_ID }}
-        GITHUB_PRIVATE_KEY_PATH: ${{ secrets.GH_APP_KEY }}
-
-    - name: Get Installation Token
-      id: installation_token
-      run: |
-        echo "Getting installation token..."
-        INSTALLATION_ID=$(curl -s -H "Authorization: Bearer ${{ steps.jwt.outputs.jwt }}" -H "Accept: application/vnd.github.v3+json" https://api.github.com/app/installations | jq -r ".[] | select(.account.login==\"goushaa\") | .id")
-        TOKEN=$(curl -s -X POST -H "Authorization: Bearer ${{ steps.jwt.outputs.jwt }}" -H "Accept: application/vnd.github.v3+json" https://api.github.com/app/installations/$INSTALLATION_ID/access_tokens | jq -r ".token")
-        echo "::set-output name=token::$TOKEN"
-
+    - name: Get Token
+      id: get_workflow_token
+      uses: peter-murray/workflow-application-token-action@v3
+      with:
+        application_id: ${{ vars.GH_APP_ID }}
+        application_private_key: ${{ secrets.GH_APP_KEY }}
+    
     - name: Create Pull Request
       run: |
         echo "Creating Pull Request..."
-        curl -X POST -H "Authorization: token ${{ steps.installation_token.outputs.token }}" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/goushaa/gold/pulls -d '{"title":"Automated PR","head":"branch-name","base":"master"}'
+        curl -X POST -H "Authorization: token ${{ steps.get_workflow_token.outputs.token }}" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/goushaa/gold/pulls -d '{"title":"Automated PR","head":"branch-name","base":"master"}'
 
     - name: Merge Pull Request
       run: |
         echo "Merging Pull Request..."
-        PR_NUMBER=$(curl -H "Authorization: token ${{ steps.installation_token.outputs.token }}" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/goushaa/gold/pulls | jq -r ".[0].number")
-        curl -X PUT -H "Authorization: token ${{ steps.installation_token.outputs.token }}" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/goushaa/gold/pulls/$PR_NUMBER/merge -d '{"commit_title":"Automated Merge"}'
-
-    env:
-      GITHUB_APP_ID: ${{ vars.GH_APP_ID }}
-      GITHUB_PRIVATE_KEY_PATH: ${{ secrets.GH_APP_KEY }}
+        PR_NUMBER=$(curl -H "Authorization: token ${{ steps.get_workflow_token.outputs.token }}" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/goushaa/gold/pulls | jq -r ".[0].number")
+        curl -X PUT -H "Authorization: token ${{ steps.get_workflow_token.outputs.token }}" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/goushaa/gold/pulls/$PR_NUMBER/merge -d '{"commit_title":"Automated Merge"}'

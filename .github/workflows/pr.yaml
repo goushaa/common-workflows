@@ -17,10 +17,10 @@ jobs:
         application_private_key: ${{ secrets.GH_APP_KEY }}    
     
     - name: Checkout code
-        uses: actions/checkout@v2
-        with:
-          repository: goushaa/gold
-          token: ${{ steps.get_workflow_token.outputs.token }}
+      uses: actions/checkout@v2
+      with:
+        repository: goushaa/gold
+        token: ${{ steps.get_workflow_token.outputs.token }}
 
     - name: Create Pull Request
       uses: peter-evans/create-pull-request@v3

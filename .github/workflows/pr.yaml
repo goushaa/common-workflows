@@ -1,0 +1,43 @@
+name: Create and Merge PR
+
+on: push
+
+jobs:
+  create-pr:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Generate JWT
+      id: jwt
+      run: |
+        echo "Generating JWT..."
+        JWT=$(ruby -r openssl -r base64 -r time -e 'require "jwt"; app_id = ENV["GITHUB_APP_ID"]; private_key = OpenSSL::PKey::RSA.new(File.read(ENV["GITHUB_PRIVATE_KEY_PATH"])); payload = { iat: Time.now.to_i, exp: Time.now.to_i + 600, iss: app_id }; jwt = JWT.encode(payload, private_key, "RS256"); puts jwt')
+        echo "::set-output name=jwt::$JWT"
+      env:
+        GITHUB_APP_ID: ${{ vars.GH_APP_ID }}
+        GITHUB_PRIVATE_KEY_PATH: ${{ secrets.GH_APP_KEY }}
+
+    - name: Get Installation Token
+      id: installation_token
+      run: |
+        echo "Getting installation token..."
+        INSTALLATION_ID=$(curl -s -H "Authorization: Bearer ${{ steps.jwt.outputs.jwt }}" -H "Accept: application/vnd.github.v3+json" https://api.github.com/app/installations | jq -r ".[] | select(.account.login==\"goushaa\") | .id")
+        TOKEN=$(curl -s -X POST -H "Authorization: Bearer ${{ steps.jwt.outputs.jwt }}" -H "Accept: application/vnd.github.v3+json" https://api.github.com/app/installations/$INSTALLATION_ID/access_tokens | jq -r ".token")
+        echo "::set-output name=token::$TOKEN"
+
+    - name: Create Pull Request
+      run: |
+        echo "Creating Pull Request..."
+        curl -X POST -H "Authorization: token ${{ steps.installation_token.outputs.token }}" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/goushaa/gold/pulls -d '{"title":"Automated PR","head":"branch-name","base":"master"}'
+
+    - name: Merge Pull Request
+      run: |
+        echo "Merging Pull Request..."
+        PR_NUMBER=$(curl -H "Authorization: token ${{ steps.installation_token.outputs.token }}" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/goushaa/gold/pulls | jq -r ".[0].number")
+        curl -X PUT -H "Authorization: token ${{ steps.installation_token.outputs.token }}" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/goushaa/gold/pulls/$PR_NUMBER/merge -d '{"commit_title":"Automated Merge"}'
+
+    env:
+      GITHUB_APP_ID: ${{ vars.GH_APP_ID }}
+      GITHUB_PRIVATE_KEY_PATH: ${{ secrets.GH_APP_KEY }}

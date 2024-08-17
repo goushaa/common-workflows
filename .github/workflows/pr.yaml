@@ -7,7 +7,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code from common-workflows
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3  
 
     - name: Get Token
       id: get_workflow_token
@@ -17,23 +17,22 @@ jobs:
         application_private_key: ${{ secrets.GH_APP_KEY }}    
     
     - name: Checkout gold repository
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3 
       with:
         repository: goushaa/gold
         token: ${{ steps.get_workflow_token.outputs.token }}
-        ref: main  # Ensure you're checking out the main branch
+        ref: main  
 
     - name: Generate random number
       id: random
-      run: echo "::set-output name=value::$(echo $RANDOM)"
+      run: echo "value=$RANDOM" >> $GITHUB_ENV  
 
     - name: Create new branch
-      uses: peterjgrainger/action-create-branch@v2.0.1
+      uses: peterjgrainger/action-create-branch@v2.1.0 
       env:
         GITHUB_TOKEN: ${{ steps.get_workflow_token.outputs.token }}
       with:
-        branch: post-${{ steps.random.outputs.value }}
-        base: main 
+        branch: post-${{ env.value }} 
 
     - name: Download file
       run: wget ${{ github.event.issue.body }} -O source/_posts/newfile.md
@@ -44,7 +43,7 @@ jobs:
         git config user.email "bot@example.com"
         git add .
         git commit -m "New post"
-        git push -u origin post-${{ steps.random.outputs.value }}  
+        git push -u origin post-${{ env.value }}
 
     - name: Create Pull Request
       uses: peter-evans/create-pull-request@v3
@@ -52,6 +51,6 @@ jobs:
         token: ${{ steps.get_workflow_token.outputs.token }}
         title: 'title'
         body: 'description'
-        head: post-${{ steps.random.outputs.value }}
+        head: post-${{ env.value }}
         base: 'main'
-        draft: false      
+        draft: false

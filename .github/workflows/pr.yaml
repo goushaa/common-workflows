@@ -6,7 +6,7 @@ jobs:
   create-pr:
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout code
+    - name: Checkout code from common-workflows
       uses: actions/checkout@v2
 
     - name: Get Token
@@ -16,30 +16,32 @@ jobs:
         application_id: ${{ vars.GH_APP_ID }}
         application_private_key: ${{ secrets.GH_APP_KEY }}    
     
-    - name: Checkout code
+    - name: Checkout gold repository
       uses: actions/checkout@v2
       with:
         repository: goushaa/gold
         token: ${{ steps.get_workflow_token.outputs.token }}
+        ref: main  # Ensure you're checking out the main branch
 
     - name: Generate random number
       id: random
       run: echo "::set-output name=value::$(echo $RANDOM)"
 
-    - name: create branch
+    - name: Create new branch
       uses: peterjgrainger/action-create-branch@v2.0.1
       env:
         GITHUB_TOKEN: ${{ steps.get_workflow_token.outputs.token }}
       with:
         branch: post-${{ steps.random.outputs.value }}
+        base: main 
 
-    - name: download file
-      run: wget ${{ github.event.issue.body }} -O source/_posts/
+    - name: Download file
+      run: wget ${{ github.event.issue.body }} -O source/_posts/newfile.md
       
-    - name: commit and push new file
+    - name: Commit and push new file
       run: |
         git config user.name "GitHub Actions Bot"
-        git config user.email "<>"
+        git config user.email "bot@example.com"
         git add .
         git commit -m "New post"
         git push -u origin post-${{ steps.random.outputs.value }}  
@@ -50,6 +52,6 @@ jobs:
         token: ${{ steps.get_workflow_token.outputs.token }}
         title: 'title'
         body: 'description'
-        branch: 'post-${{ steps.random.outputs.value }} '
+        head: post-${{ steps.random.outputs.value }}
         base: 'main'
         draft: false      
